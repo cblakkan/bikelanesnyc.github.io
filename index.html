@@ -40,14 +40,14 @@
         position: absolute;
         right: 10px;
         top: 120px;
-        width: 27px;
-        height: 27px;
+        width: 40px;
+        height: 40px;
         z-index: 100;
         background: white;
         border-style: solid;
         border-width: 1px;
-        border-color: gray;
-        border-radius: 5px;
+        border-color: rgba(0,0,0,0.2);
+        border-radius: 4px;
         text-align: center;
         user-select: none;
         -webkit-user-select: none;
@@ -55,28 +55,78 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        font-size: 11px;
+        font-weight: 500;
+        color: #333;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.15);
     }
     #legend-toggle:hover {
-        background-color: lightgray;
+        background-color: #f0f0f0;
+    }
+    #legend-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 200;
     }
     #legend-content {
         display: none;
         position: absolute;
-        left: 25vw;
-        z-index: 10;
-        width: 50vw;
-        top: 25vh;
+        right: 10px;
+        top: 165px;
+        z-index: 300;
+        width: 220px;
         background: white;
         border-radius: 8px;
-        border: 1px solid gray;
+        border: 1px solid rgba(0,0,0,0.2);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        padding: 8px 0;
     }
-    #legend-content div {
-        margin: 5px;
-        padding: 2px;
-        border-radius: 3px;
-        font-weight: bold;
-        text-shadow: 1px 1px 1px black;
+    #legend-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 12px 8px;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 8px;
+    }
+    #legend-header span {
+        font-weight: 600;
+        font-size: 14px;
+        color: #333;
+    }
+    #legend-close {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        color: #666;
+        padding: 0 4px;
+        line-height: 1;
+    }
+    #legend-close:hover {
+        color: #333;
+    }
+    .legend-item {
+        margin: 4px 12px;
+        padding: 6px 8px;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 12px;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
         color: white;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .legend-line {
+        width: 24px;
+        height: 4px;
+        border-radius: 2px;
+        flex-shrink: 0;
     }
     .SIDEWALK_BIKELANE {
         background-color: #6CBE45;
@@ -89,36 +139,68 @@
     }
     .SHARED_BIKELANE {
         background-color: #FCCC0A;
+        color: #333;
+        text-shadow: none;
     }
     .LINK_BIKELANE {
         background-color: orange;
     }
-    .GARBAGE_BIKELANE {
+    .SIGNED_ROUTE {
         background-color: red;
+    }
+    .legend-line.dashed {
+        background: repeating-linear-gradient(
+            90deg,
+            currentColor 0px,
+            currentColor 4px,
+            transparent 4px,
+            transparent 8px
+        );
+        height: 4px;
+    }
+    .maplibregl-popup-content {
+        padding: 10px 14px;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 13px;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .popup-title {
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    .popup-type {
+        color: #666;
+        font-size: 12px;
     }
   </style>
 </head>
 <body>
     <div class="wrapper">
-        <div id="legend-toggle">?</div>
+        <div id="legend-toggle">Legend</div>
+        <div id="legend-overlay"></div>
         <div id="legend-content">
-            <div class="PROTECTED_BIKELANE">
-                Protected Path, Greenway
+            <div id="legend-header">
+                <span>Bike Lane Types</span>
+                <button id="legend-close">&times;</button>
             </div>
-            <div class="SIDEWALK_BIKELANE">
-                Sidewalk, Boardwalk
+            <div class="legend-item PROTECTED_BIKELANE">
+                Protected Path / Greenway
             </div>
-            <div class="STANDARD_BIKELANE">
-                Standard, Curbside
+            <div class="legend-item SIDEWALK_BIKELANE">
+                Sidewalk / Boardwalk
             </div>
-            <div class="SHARED_BIKELANE">
+            <div class="legend-item STANDARD_BIKELANE">
+                Standard / Curbside
+            </div>
+            <div class="legend-item SHARED_BIKELANE">
                 Sharrows
-                </div>
-            <div class="LINK_BIKELANE">
+            </div>
+            <div class="legend-item LINK_BIKELANE">
                 Link
             </div>
-            <div class="GARBAGE_BIKELANE">
-                Signed Route, Bike-Friendly Parking
+            <div class="legend-item SIGNED_ROUTE">
+                Signed Route
             </div>
         </div>
         <div class="map-wrapper">
@@ -140,7 +222,7 @@
         let STANDARD_BIKELANE = '#0039A6';
         let SHARED_BIKELANE = '#FCCC0A';
         let LINK_BIKELANE = 'orange';
-        let GARBAGE_BIKELANE = 'red';
+        let SIGNED_ROUTE = 'red';
 
         var map = new maplibregl.Map({
             container: 'map',
@@ -184,27 +266,9 @@
                 },
                 'filter': [
                     'any', 
-                        ['==', ['get', 'ft_facilit'], 'Protected Path'],
-                        ['==', ['get', 'tf_facilit'], 'Protected Path'],
-                        ['==', ['get', 'tf2facilit'], 'Protected Path'],
-                        ['==', ['get', 'ft2facilit'], 'Protected Path']
-                    
-                ]
-            });
-        
-            map.addLayer({
-                'id': 'greenway',
-                'type': 'line',
-                'source': 'bikejson',
-                'paint': {
-                    'line-color': PROTECTED_BIKELANE,
-                    'line-width': LINE_WIDTH ,
-                    'line-opacity': OPACITY
-                },
-                'filter': [
-                    'any', 
-                        ['==', ['get', 'ft_facilit'], 'Greenway'],
-                        ['==', ['get', 'tf_facilit'], 'Greenway']
+                        ['==', ['get', 'ft_facilit'], 'Protected'],
+                        ['==', ['get', 'tf_facilit'], 'Protected'],
+                        ['==', ['get', 'grnwy'], 'Greenway']
                     
                 ]
             });
@@ -243,24 +307,14 @@
                 },
                 'filter': [
                     'any',
-                        ['==', ['get', 'ft_facilit'], 'Standard'],
-                        ['==', ['get', 'tf_facilit'], 'Standard']
-                ]
-            });
-
-            map.addLayer({
-                'id': 'curbside',
-                'type': 'line',
-                'source': 'bikejson',
-                'paint': {
-                    'line-color': STANDARD_BIKELANE,
-                    'line-width': LINE_WIDTH ,
-                    'line-opacity': OPACITY
-                },
-                'filter': [
-                    'any',
+                        ['==', ['get', 'ft_facilit'], 'Conventional'],
+                        ['==', ['get', 'tf_facilit'], 'Conventional'],
+                        ['==', ['get', 'ft_facilit'], 'Conventional Buffered'],
+                        ['==', ['get', 'tf_facilit'], 'Conventional Buffered'],
                         ['==', ['get', 'ft_facilit'], 'Curbside'],
-                        ['==', ['get', 'tf_facilit'], 'Curbside']
+                        ['==', ['get', 'tf_facilit'], 'Curbside'],
+                        ['==', ['get', 'ft_facilit'], 'Curbside Buffered'],
+                        ['==', ['get', 'tf_facilit'], 'Curbside Buffered']
                 ]
             });
         
@@ -275,10 +329,8 @@
                 },
                 'filter': [
                     'any',
-                        ['==', ['get', 'ft_facilit'], 'Sharrows'],
-                        ['==', ['get', 'tf_facilit'], 'Sharrows'],
-                        ['==', ['get', 'tf2facilit'], 'Sharrows'],
-                        ['==', ['get', 'ft2facilit'], 'Sharrows']
+                        ['==', ['get', 'ft_facilit'], 'Shared'],
+                        ['==', ['get', 'tf_facilit'], 'Shared']
                 ]   
             });
 
@@ -299,20 +351,21 @@
             });            
 
             map.addLayer({
-                'id': 'garbage',
+                'id': 'signed-route',
                 'type': 'line',
                 'source': 'bikejson',
                 'paint': {
-                    'line-color': GARBAGE_BIKELANE,
+                    'line-color': SIGNED_ROUTE,
                     'line-width': 4,
-                    'line-opacity': OPACITY
+                    'line-opacity': OPACITY,
+                    'line-dasharray': [2, 2]
                 },
                 'filter': [
                     'any',
                         ['==', ['get', 'ft_facilit'], 'Signed Route'],
                         ['==', ['get', 'tf_facilit'], 'Signed Route'],
-                        ['==', ['get', 'ft_facilit'], 'Bike-Friendly Parking'],
-                        ['==', ['get', 'tf_facilit'], 'Bike-Friendly Parking'],
+                        ['==', ['get', 'ft_facilit'], 'Wide Parking Lane'],
+                        ['==', ['get', 'tf_facilit'], 'Wide Parking Lane']
                 ]
             });
 
@@ -353,25 +406,62 @@
                     
                 ]
             });
+
+            const routeLayers = ['protected', 'sidewalk', 'standards', 'sharrows', 'link', 'signed-route'];
+            
+            routeLayers.forEach(layer => {
+                map.on('click', layer, (e) => {
+                    if (!e.features || e.features.length === 0) return;
+                    
+                    const feature = e.features[0];
+                    const props = feature.properties;
+                    const streetName = props.street || props.name || 'Unknown Street';
+                    const facilityType = props.ft_facilit || props.tf_facilit || 'Bike Route';
+                    
+                    new maplibregl.Popup({ closeButton: true, closeOnClick: true })
+                        .setLngLat(e.lngLat)
+                        .setHTML(`
+                            <div class="popup-title">${streetName}</div>
+                            <div class="popup-type">${facilityType}</div>
+                        `)
+                        .addTo(map);
+                });
+
+                map.on('mouseenter', layer, () => {
+                    map.getCanvas().style.cursor = 'pointer';
+                });
+
+                map.on('mouseleave', layer, () => {
+                    map.getCanvas().style.cursor = '';
+                });
+            });
         });
 
-        function JumpToCurrentLocation(){
-            window.navigator.geolocation.getCurrentPosition(function(position){
-                let [minLong, minLat] = MAX_BOUNDS[0];
-                let [maxLong, maxLat] = MAX_BOUNDS[1];
-                let inBoundsLat = minLat <= position.coords.latitude && position.coords.latitude <= maxLat;
-                let inBoundsLong = minLong <= position.coords.longitude && position.coords.longitude <= maxLong;
-                if ( inBoundsLat && inBoundsLong ){
-                    map.flyTo({center: [position.coords.longitude, position.coords.latitude]});
-                }
-            });
+        const legendContent = document.getElementById('legend-content');
+        const legendOverlay = document.getElementById('legend-overlay');
+        const legendToggle = document.getElementById('legend-toggle');
+        const legendClose = document.getElementById('legend-close');
+
+        function showLegend() {
+            legendContent.style.display = 'block';
+            legendOverlay.style.display = 'block';
         }
 
-        window.addEventListener('load', function(){ JumpToCurrentLocation() });
-        legendContent = document.getElementById('legend-content');
-        document.getElementById('legend-toggle').addEventListener('click', function(event){
-            legendContent.style.display = legendContent.style.display === 'none' ? 'block' : 'none';
-        })
+        function hideLegend() {
+            legendContent.style.display = 'none';
+            legendOverlay.style.display = 'none';
+        }
+
+        legendToggle.addEventListener('click', function() {
+            if (legendContent.style.display === 'block') {
+                hideLegend();
+            } else {
+                showLegend();
+            }
+        });
+
+        legendClose.addEventListener('click', hideLegend);
+        legendOverlay.addEventListener('click', hideLegend);
     </script>
 </body>
 </html>
