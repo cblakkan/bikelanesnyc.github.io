@@ -15,7 +15,7 @@
   <link href='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css' rel='stylesheet' />
   <script src='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js'></script>
   <script type="text/javascript" src="bikeroutes.json"></script>
-  
+
   <style>
     html, body {
         height: 100vh;
@@ -36,18 +36,18 @@
         height: 100%;
         width: 100%;
     }
+
+    /* Legend toggle button */
     #legend-toggle {
         position: absolute;
         right: 10px;
-        top: 120px;
+        top: 155px;
         width: 40px;
         height: 40px;
         z-index: 100;
         background: white;
-        border-style: solid;
-        border-width: 1px;
-        border-color: rgba(0,0,0,0.2);
-        border-radius: 4px;
+        border: 1px solid rgba(0,0,0,0.2);
+        border-radius: 8px;
         text-align: center;
         user-select: none;
         -webkit-user-select: none;
@@ -55,28 +55,39 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 11px;
-        font-weight: 500;
-        color: #333;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        transition: background-color 0.15s ease;
+    }
+    #legend-toggle svg {
+        width: 20px;
+        height: 20px;
     }
     #legend-toggle:hover {
         background-color: #f0f0f0;
     }
+
+    /* Legend overlay (click-away backdrop) */
     #legend-overlay {
-        display: none;
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
         z-index: 200;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
     }
+    #legend-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Legend content panel */
     #legend-content {
-        display: none;
         position: absolute;
         right: 10px;
-        top: 165px;
+        top: 245px;
         z-index: 300;
         width: 220px;
         background: white;
@@ -84,18 +95,28 @@
         border: 1px solid rgba(0,0,0,0.2);
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         padding: 8px 0;
+        opacity: 0;
+        transform: translateY(-8px);
+        pointer-events: none;
+        transition: opacity 0.2s ease, transform 0.2s ease;
     }
+    #legend-content.visible {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+
     #legend-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 4px 12px 8px;
+        padding: 4px 14px 10px;
         border-bottom: 1px solid #eee;
         margin-bottom: 8px;
     }
     #legend-header span {
         font-weight: 600;
-        font-size: 14px;
+        font-size: 15px;
         color: #333;
     }
     #legend-close {
@@ -110,17 +131,17 @@
     #legend-close:hover {
         color: #333;
     }
+
+    /* Legend items: swatch + text on white background */
     .legend-item {
-        margin: 4px 12px;
-        padding: 6px 8px;
-        border-radius: 4px;
-        font-weight: 600;
-        font-size: 12px;
-        text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
-        color: white;
+        margin: 2px 14px;
+        padding: 7px 0;
+        font-weight: 500;
+        font-size: 13px;
+        color: #333;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
     }
     .legend-line {
         width: 24px;
@@ -128,42 +149,151 @@
         border-radius: 2px;
         flex-shrink: 0;
     }
-    .SIDEWALK_BIKELANE {
-        background-color: #6CBE45;
-    }
-    .PROTECTED_BIKELANE {
-        background-color: #00933C;
-    }
-    .STANDARD_BIKELANE {
-        background-color: #0039A6;
-    }
-    .SHARED_BIKELANE {
-        background-color: #FCCC0A;
-        color: #333;
-        text-shadow: none;
-    }
-    .LINK_BIKELANE {
-        background-color: orange;
-    }
-    .SIGNED_ROUTE {
-        background-color: red;
-    }
     .legend-line.dashed {
         background: repeating-linear-gradient(
             90deg,
-            currentColor 0px,
-            currentColor 4px,
+            #DC2626 0px,
+            #DC2626 4px,
             transparent 4px,
             transparent 8px
         );
         height: 4px;
     }
+
+    /* Palette toggle button */
+    #palette-toggle {
+        position: absolute;
+        right: 10px;
+        top: 200px;
+        width: 40px;
+        height: 40px;
+        z-index: 100;
+        background: white;
+        border: 1px solid rgba(0,0,0,0.2);
+        border-radius: 8px;
+        user-select: none;
+        -webkit-user-select: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        transition: background-color 0.15s ease;
+    }
+    #palette-toggle svg {
+        width: 22px;
+        height: 22px;
+    }
+    #palette-toggle:hover {
+        background-color: #f0f0f0;
+    }
+
+    /* Palette picker panel */
+    #palette-content {
+        position: absolute;
+        right: 10px;
+        top: 245px;
+        z-index: 300;
+        width: 220px;
+        background: white;
+        border-radius: 8px;
+        border: 1px solid rgba(0,0,0,0.2);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        padding: 8px 0;
+        opacity: 0;
+        transform: translateY(-8px);
+        pointer-events: none;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    #palette-content.visible {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+    #palette-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 14px 10px;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 4px;
+    }
+    #palette-header span {
+        font-weight: 600;
+        font-size: 15px;
+        color: #333;
+    }
+    #palette-close {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        color: #666;
+        padding: 0 4px;
+        line-height: 1;
+    }
+    #palette-close:hover {
+        color: #333;
+    }
+    .palette-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        cursor: pointer;
+        transition: background-color 0.1s ease;
+    }
+    .palette-option:hover {
+        background-color: #f5f5f5;
+    }
+    .palette-option.active {
+        background-color: #EEF2FF;
+    }
+    .palette-dots {
+        display: flex;
+        gap: 3px;
+    }
+    .palette-dots span {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: block;
+    }
+    .palette-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: #333;
+    }
+
+    /* Popup styling */
     .maplibregl-popup-content {
-        padding: 10px 14px;
+        padding: 0 !important;
         font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         font-size: 13px;
-        border-radius: 6px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+        overflow: hidden;
+    }
+    .maplibregl-popup-close-button {
+        font-size: 18px;
+        padding: 4px 8px;
+        color: #666;
+        right: 0;
+        top: 0;
+    }
+    .maplibregl-popup-close-button:hover {
+        color: #333;
+        background: rgba(0,0,0,0.05);
+    }
+    .popup-inner {
+        display: flex;
+    }
+    .popup-accent {
+        width: 5px;
+        flex-shrink: 0;
+    }
+    .popup-body {
+        padding: 10px 14px;
     }
     .popup-title {
         font-weight: 600;
@@ -173,295 +303,85 @@
         color: #666;
         font-size: 12px;
     }
+
+    /* MapLibre controls styling */
+    .maplibregl-ctrl-group {
+        border-radius: 8px !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
+        border: 1px solid rgba(0,0,0,0.2) !important;
+    }
+    .maplibregl-ctrl-group button {
+        width: 40px !important;
+        height: 40px !important;
+    }
+    .maplibregl-ctrl-group button:hover {
+        background-color: #f0f0f0 !important;
+    }
+    .maplibregl-ctrl-group button + button {
+        border-top: 1px solid rgba(0,0,0,0.1) !important;
+    }
   </style>
 </head>
 <body>
     <div class="wrapper">
-        <div id="legend-toggle">Legend</div>
+        <div id="legend-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round">
+                <line x1="4" y1="6" x2="20" y2="6"/>
+                <line x1="4" y1="12" x2="20" y2="12"/>
+                <line x1="4" y1="18" x2="20" y2="18"/>
+            </svg>
+        </div>
+        <div id="palette-toggle">
+            <svg viewBox="0 0 24 24">
+                <circle id="pdot-0" cx="8" cy="8" r="3.5" fill="#16A34A"/>
+                <circle id="pdot-1" cx="16" cy="8" r="3.5" fill="#4F46E5"/>
+                <circle id="pdot-2" cx="8" cy="16" r="3.5" fill="#EC4899"/>
+                <circle id="pdot-3" cx="16" cy="16" r="3.5" fill="#EA580C"/>
+            </svg>
+        </div>
         <div id="legend-overlay"></div>
         <div id="legend-content">
             <div id="legend-header">
                 <span>Bike Lane Types</span>
                 <button id="legend-close">&times;</button>
             </div>
-            <div class="legend-item PROTECTED_BIKELANE">
+            <div class="legend-item">
+                <div class="legend-line" data-layer="protected" style="background-color: #16A34A"></div>
                 Protected Path / Greenway
             </div>
-            <div class="legend-item SIDEWALK_BIKELANE">
+            <div class="legend-item">
+                <div class="legend-line" data-layer="sidewalk" style="background-color: #84CC16"></div>
                 Sidewalk / Boardwalk
             </div>
-            <div class="legend-item STANDARD_BIKELANE">
+            <div class="legend-item">
+                <div class="legend-line" data-layer="standards" style="background-color: #4F46E5"></div>
                 Standard / Curbside
             </div>
-            <div class="legend-item SHARED_BIKELANE">
+            <div class="legend-item">
+                <div class="legend-line" data-layer="sharrows" style="background-color: #EC4899"></div>
                 Sharrows
             </div>
-            <div class="legend-item LINK_BIKELANE">
+            <div class="legend-item">
+                <div class="legend-line" data-layer="link" style="background-color: #EA580C"></div>
                 Link
             </div>
-            <div class="legend-item SIGNED_ROUTE">
+            <div class="legend-item">
+                <div class="legend-line dashed" data-layer="signed-route"></div>
                 Signed Route
             </div>
+        </div>
+        <div id="palette-content">
+            <div id="palette-header">
+                <span>Color Theme</span>
+                <button id="palette-close">&times;</button>
+            </div>
+            <div id="palette-options"></div>
         </div>
         <div class="map-wrapper">
             <div id="map"></div>
         </div>
     </div>
 
-    <script>
-        let DEFAULT_CENTER = [-73.97, 40.68];
-        let MAX_BOUNDS = [
-            [-74.1, 40.53],
-            [-73.6, 40.95]
-        ];
-        let LINE_WIDTH = 8;
-        let OPACITY = 0.75;
-        // NY MTA Theme
-        let SIDEWALK_BIKELANE = '#6CBE45';
-        let PROTECTED_BIKELANE = '#00933C';
-        let STANDARD_BIKELANE = '#0039A6';
-        let SHARED_BIKELANE = '#FCCC0A';
-        let LINK_BIKELANE = 'orange';
-        let SIGNED_ROUTE = 'red';
-
-        var map = new maplibregl.Map({
-            container: 'map',
-            style: 'https://api.maptiler.com/maps/b2512def-9887-424c-8274-dcae4a27558c/style.json?key=PhiQIVhvnvbs5yAOcy6M',
-            center: DEFAULT_CENTER,
-            maxBounds: MAX_BOUNDS,
-            zoom: 13,
-            minZoom: 11,
-            maxZoom: 17,
-            attributionControl: false,
-            dragRotate: false,
-            pitchWithRotate: false,
-            touchPitch: false
-        });
-
-        map.on('load', async () => {
-            map.addControl(
-                new maplibregl.GeolocateControl({
-                    positionOptions: {
-                        enableHighAccuracy: true
-                    },
-                    trackUserLocation: true
-                })
-            );
-
-            map.addControl(new maplibregl.NavigationControl({showCompass: false}));
-
-            map.addSource('bikejson', {
-                'type': 'geojson',
-                'data': BIKEJSON
-            })
-
-            map.addLayer({
-                'id': 'protected',
-                'type': 'line',
-                'source': 'bikejson',
-                'paint': {
-                    'line-color': PROTECTED_BIKELANE,
-                    'line-width': LINE_WIDTH ,
-                    'line-opacity': OPACITY
-                },
-                'filter': [
-                    'any', 
-                        ['==', ['get', 'ft_facilit'], 'Protected'],
-                        ['==', ['get', 'tf_facilit'], 'Protected'],
-                        ['==', ['get', 'grnwy'], 'Greenway']
-                    
-                ]
-            });
-
-            arrowLeftImage = await map.loadImage('arrow-left.png');
-            arrowRightImage = await map.loadImage('arrow-right.png');
-            map.addImage('arrow-left', arrowLeftImage.data);
-            map.addImage('arrow-right', arrowRightImage.data);
-
-            map.addLayer({
-                'id': 'sidewalk',
-                'type': 'line',
-                'source': 'bikejson',
-                'paint': {
-                    'line-color': SIDEWALK_BIKELANE,
-                    'line-width': LINE_WIDTH,
-                    'line-opacity': OPACITY
-                },
-                'filter': [
-                    'any',
-                        ['==', ['get', 'ft_facilit'], 'Sidewalk'],
-                        ['==', ['get', 'tf_facilit'], 'Sidewalk'],
-                        ['==', ['get', 'ft_facilit'], 'Boardwalk'],
-                        ['==', ['get', 'tf_facilit'], 'Boardwalk']
-                ]
-            });
-        
-            map.addLayer({
-                'id': 'standards',
-                'type': 'line',
-                'source': 'bikejson',
-                'paint': {
-                    'line-color': STANDARD_BIKELANE,
-                    'line-width': LINE_WIDTH ,
-                    'line-opacity': OPACITY
-                },
-                'filter': [
-                    'any',
-                        ['==', ['get', 'ft_facilit'], 'Conventional'],
-                        ['==', ['get', 'tf_facilit'], 'Conventional'],
-                        ['==', ['get', 'ft_facilit'], 'Conventional Buffered'],
-                        ['==', ['get', 'tf_facilit'], 'Conventional Buffered'],
-                        ['==', ['get', 'ft_facilit'], 'Curbside'],
-                        ['==', ['get', 'tf_facilit'], 'Curbside'],
-                        ['==', ['get', 'ft_facilit'], 'Curbside Buffered'],
-                        ['==', ['get', 'tf_facilit'], 'Curbside Buffered']
-                ]
-            });
-        
-            map.addLayer({
-                'id': 'sharrows',
-                'type': 'line',
-                'source': 'bikejson',
-                'paint': {
-                    'line-color': SHARED_BIKELANE,
-                    'line-width': LINE_WIDTH ,
-                    'line-opacity': OPACITY
-                },
-                'filter': [
-                    'any',
-                        ['==', ['get', 'ft_facilit'], 'Shared'],
-                        ['==', ['get', 'tf_facilit'], 'Shared']
-                ]   
-            });
-
-            map.addLayer({
-                'id': 'link',
-                'type': 'line',
-                'source': 'bikejson',
-                'paint': {
-                    'line-color': "orange",
-                    'line-width': 12,
-                    'line-opacity': OPACITY
-                },
-                'filter': [
-                    'any',
-                        ['==', ['get', 'ft_facilit'], 'Link'],
-                        ['==', ['get', 'tf_facilit'], 'Link']
-                ]
-            });            
-
-            map.addLayer({
-                'id': 'signed-route',
-                'type': 'line',
-                'source': 'bikejson',
-                'paint': {
-                    'line-color': SIGNED_ROUTE,
-                    'line-width': 4,
-                    'line-opacity': OPACITY,
-                    'line-dasharray': [2, 2]
-                },
-                'filter': [
-                    'any',
-                        ['==', ['get', 'ft_facilit'], 'Signed Route'],
-                        ['==', ['get', 'tf_facilit'], 'Signed Route'],
-                        ['==', ['get', 'ft_facilit'], 'Wide Parking Lane'],
-                        ['==', ['get', 'tf_facilit'], 'Wide Parking Lane']
-                ]
-            });
-
-            map.addLayer({
-                'id': 'l-labels',
-                'type': 'symbol',
-                'source': 'bikejson',
-                'layout': {
-                    'icon-image': 'arrow-left',
-                    'icon-size': 0.15,
-                    'icon-rotation-alignment': 'map',
-                    'symbol-placement': 'line-center',
-                    'icon-allow-overlap': true,
-                },
-                'paint': {
-                    'icon-opacity': 0.8
-                },
-                'filter': [
-                    'any', 
-                        ['==', ['get', 'bikedir'], 'L'],
-                    
-                ]
-            });
-
-            map.addLayer({
-                'id': 'r-labels',
-                'type': 'symbol',
-                'source': 'bikejson',
-                'layout': {
-                    'icon-image': 'arrow-right',
-                    'icon-size': 0.15,
-                    'icon-rotation-alignment': 'map',
-                    'symbol-placement': 'line-center',
-                },
-                'filter': [
-                    'any', 
-                        ['==', ['get', 'bikedir'], 'R'],
-                    
-                ]
-            });
-
-            const routeLayers = ['protected', 'sidewalk', 'standards', 'sharrows', 'link', 'signed-route'];
-            
-            routeLayers.forEach(layer => {
-                map.on('click', layer, (e) => {
-                    if (!e.features || e.features.length === 0) return;
-                    
-                    const feature = e.features[0];
-                    const props = feature.properties;
-                    const streetName = props.street || props.name || 'Unknown Street';
-                    const facilityType = props.ft_facilit || props.tf_facilit || 'Bike Route';
-                    
-                    new maplibregl.Popup({ closeButton: true, closeOnClick: true })
-                        .setLngLat(e.lngLat)
-                        .setHTML(`
-                            <div class="popup-title">${streetName}</div>
-                            <div class="popup-type">${facilityType}</div>
-                        `)
-                        .addTo(map);
-                });
-
-                map.on('mouseenter', layer, () => {
-                    map.getCanvas().style.cursor = 'pointer';
-                });
-
-                map.on('mouseleave', layer, () => {
-                    map.getCanvas().style.cursor = '';
-                });
-            });
-        });
-
-        const legendContent = document.getElementById('legend-content');
-        const legendOverlay = document.getElementById('legend-overlay');
-        const legendToggle = document.getElementById('legend-toggle');
-        const legendClose = document.getElementById('legend-close');
-
-        function showLegend() {
-            legendContent.style.display = 'block';
-            legendOverlay.style.display = 'block';
-        }
-
-        function hideLegend() {
-            legendContent.style.display = 'none';
-            legendOverlay.style.display = 'none';
-        }
-
-        legendToggle.addEventListener('click', function() {
-            if (legendContent.style.display === 'block') {
-                hideLegend();
-            } else {
-                showLegend();
-            }
-        });
-
-        legendClose.addEventListener('click', hideLegend);
-        legendOverlay.addEventListener('click', hideLegend);
-    </script>
+    <script src="map.js"></script>
 </body>
 </html>
