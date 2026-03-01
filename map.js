@@ -56,7 +56,7 @@ const PALETTES = {
 };
 
 let currentPaletteName =
-  localStorage.getItem("bikemap-palette") || "High Contrast";
+  localStorage.getItem("bikemap-palette") || "MTA";
 let currentPalette = PALETTES[currentPaletteName] || PALETTES["High Contrast"];
 
 let PROTECTED_BIKELANE = currentPalette.protected;
@@ -144,6 +144,117 @@ map.on("load", async () => {
     data: BIKEJSON,
   });
 
+  // Generate arrow images from canvas
+  map.addImage("arrow-left", createArrowImage("left"), { pixelRatio: 2 });
+  map.addImage("arrow-right", createArrowImage("right"), { pixelRatio: 2 });
+
+  // Priority exclusion helpers — each lower-priority layer excludes features
+  // already matched by a higher-priority layer, so overlapping segments (e.g.
+  // a road with Protected in one direction and Conventional in the other) only
+  // render once at the highest priority level.
+  // Layers are also added lowest-priority-first so that when separate features
+  // share the same geometry, the highest-priority layer paints on top.
+  const IS_PROTECTED = ["any",
+    ["==", ["get", "ft_facilit"], "Protected"],
+    ["==", ["get", "tf_facilit"], "Protected"],
+    ["==", ["get", "grnwy"], "Greenway"],
+  ];
+  const IS_SIDEWALK = ["any",
+    ["==", ["get", "ft_facilit"], "Sidewalk"],
+    ["==", ["get", "tf_facilit"], "Sidewalk"],
+    ["==", ["get", "ft_facilit"], "Boardwalk"],
+    ["==", ["get", "tf_facilit"], "Boardwalk"],
+  ];
+  const IS_STANDARDS = ["any",
+    ["==", ["get", "ft_facilit"], "Conventional"],
+    ["==", ["get", "tf_facilit"], "Conventional"],
+    ["==", ["get", "ft_facilit"], "Conventional Buffered"],
+    ["==", ["get", "tf_facilit"], "Conventional Buffered"],
+    ["==", ["get", "ft_facilit"], "Curbside"],
+    ["==", ["get", "tf_facilit"], "Curbside"],
+    ["==", ["get", "ft_facilit"], "Curbside Buffered"],
+    ["==", ["get", "tf_facilit"], "Curbside Buffered"],
+  ];
+  const IS_SHARROWS = ["any",
+    ["==", ["get", "ft_facilit"], "Shared"],
+    ["==", ["get", "tf_facilit"], "Shared"],
+  ];
+  const IS_LINK = ["any",
+    ["==", ["get", "ft_facilit"], "Link"],
+    ["==", ["get", "tf_facilit"], "Link"],
+  ];
+
+  map.addLayer({
+    id: "sidewalk",
+    type: "line",
+    source: "bikejson",
+    paint: {
+      "line-color": SIDEWALK_BIKELANE,
+      "line-width": LINE_WIDTH,
+      "line-opacity": OPACITY,
+    },
+    filter: ["all", IS_SIDEWALK, ["!", IS_PROTECTED]],
+  });
+
+  map.addLayer({
+    id: "standards",
+    type: "line",
+    source: "bikejson",
+    paint: {
+      "line-color": STANDARD_BIKELANE,
+      "line-width": LINE_WIDTH,
+      "line-opacity": OPACITY,
+    },
+    filter: ["all", IS_STANDARDS, ["!", IS_PROTECTED], ["!", IS_SIDEWALK]],
+  });
+
+  map.addLayer({
+    id: "sharrows",
+    type: "line",
+    source: "bikejson",
+    paint: {
+      "line-color": SHARED_BIKELANE,
+      "line-width": LINE_WIDTH,
+      "line-opacity": OPACITY,
+    },
+    filter: ["all", IS_SHARROWS, ["!", IS_PROTECTED], ["!", IS_SIDEWALK], ["!", IS_STANDARDS]],
+  });
+
+  map.addLayer({
+    id: "link",
+    type: "line",
+    source: "bikejson",
+    paint: {
+      "line-color": LINK_BIKELANE,
+      "line-width": LINK_WIDTH,
+      "line-opacity": OPACITY,
+    },
+    filter: ["all", IS_LINK, ["!", IS_PROTECTED], ["!", IS_SIDEWALK], ["!", IS_STANDARDS], ["!", IS_SHARROWS]],
+  });
+
+  map.addLayer({
+    id: "signed-route",
+    type: "line",
+    source: "bikejson",
+    paint: {
+      "line-color": SIGNED_ROUTE,
+      "line-width": SIGNED_ROUTE_WIDTH,
+      "line-opacity": OPACITY,
+      "line-dasharray": [2, 2],
+    },
+    filter: ["all",
+      ["any",
+        ["==", ["get", "ft_facilit"], "Signed Route"],
+        ["==", ["get", "tf_facilit"], "Signed Route"],
+        ["==", ["get", "ft_facilit"], "Wide Parking Lane"],
+        ["==", ["get", "tf_facilit"], "Wide Parking Lane"],
+      ],
+      ["!", IS_PROTECTED], ["!", IS_SIDEWALK], ["!", IS_STANDARDS], ["!", IS_SHARROWS], ["!", IS_LINK],
+    ],
+  });
+
+  // Protected is added last so it renders on top of all other line layers,
+  // ensuring it always takes visual priority over overlapping lower-priority features.
   map.addLayer({
     id: "protected",
     type: "line",
@@ -158,101 +269,6 @@ map.on("load", async () => {
       ["==", ["get", "ft_facilit"], "Protected"],
       ["==", ["get", "tf_facilit"], "Protected"],
       ["==", ["get", "grnwy"], "Greenway"],
-    ],
-  });
-
-  // Generate arrow images from canvas
-  map.addImage("arrow-left", createArrowImage("left"), { pixelRatio: 2 });
-  map.addImage("arrow-right", createArrowImage("right"), { pixelRatio: 2 });
-
-  map.addLayer({
-    id: "sidewalk",
-    type: "line",
-    source: "bikejson",
-    paint: {
-      "line-color": SIDEWALK_BIKELANE,
-      "line-width": LINE_WIDTH,
-      "line-opacity": OPACITY,
-    },
-    filter: [
-      "any",
-      ["==", ["get", "ft_facilit"], "Sidewalk"],
-      ["==", ["get", "tf_facilit"], "Sidewalk"],
-      ["==", ["get", "ft_facilit"], "Boardwalk"],
-      ["==", ["get", "tf_facilit"], "Boardwalk"],
-    ],
-  });
-
-  map.addLayer({
-    id: "standards",
-    type: "line",
-    source: "bikejson",
-    paint: {
-      "line-color": STANDARD_BIKELANE,
-      "line-width": LINE_WIDTH,
-      "line-opacity": OPACITY,
-    },
-    filter: [
-      "any",
-      ["==", ["get", "ft_facilit"], "Conventional"],
-      ["==", ["get", "tf_facilit"], "Conventional"],
-      ["==", ["get", "ft_facilit"], "Conventional Buffered"],
-      ["==", ["get", "tf_facilit"], "Conventional Buffered"],
-      ["==", ["get", "ft_facilit"], "Curbside"],
-      ["==", ["get", "tf_facilit"], "Curbside"],
-      ["==", ["get", "ft_facilit"], "Curbside Buffered"],
-      ["==", ["get", "tf_facilit"], "Curbside Buffered"],
-    ],
-  });
-
-  map.addLayer({
-    id: "sharrows",
-    type: "line",
-    source: "bikejson",
-    paint: {
-      "line-color": SHARED_BIKELANE,
-      "line-width": LINE_WIDTH,
-      "line-opacity": OPACITY,
-    },
-    filter: [
-      "any",
-      ["==", ["get", "ft_facilit"], "Shared"],
-      ["==", ["get", "tf_facilit"], "Shared"],
-    ],
-  });
-
-  map.addLayer({
-    id: "link",
-    type: "line",
-    source: "bikejson",
-    paint: {
-      "line-color": LINK_BIKELANE,
-      "line-width": LINK_WIDTH,
-      "line-opacity": OPACITY,
-    },
-    filter: [
-      "any",
-      ["==", ["get", "ft_facilit"], "Link"],
-      ["==", ["get", "tf_facilit"], "Link"],
-    ],
-  });
-
-  map.addLayer({
-    id: "signed-route",
-    type: "line",
-    source: "bikejson",
-    paint: {
-      "line-color": SIGNED_ROUTE,
-      "line-width": SIGNED_ROUTE_WIDTH,
-      "line-opacity": OPACITY,
-      "line-dasharray": [2, 2],
-    },
-    filter: [
-      "any",
-      ["==", ["get", "ft_facilit"], "Signed Route"],
-      ["==", ["get", "tf_facilit"], "Signed Route"],
-      ["==", ["get", "ft_facilit"], "Wide Parking Lane"],
-      ["==", ["get", "tf_facilit"], "Wide Parking Lane"],
     ],
   });
 
@@ -334,6 +350,8 @@ map.on("load", async () => {
     filter: ["any", ["==", ["get", "bikedir"], "R"]],
   });
 
+  // Priority order: highest first. queryRenderedFeatures returns features
+  // ordered by render stack (top layer first), so features[0] is the winner.
   const routeLayers = [
     "protected",
     "sidewalk",
@@ -343,36 +361,35 @@ map.on("load", async () => {
     "signed-route",
   ];
 
+  map.on("click", (e) => {
+    const features = map.queryRenderedFeatures(e.point, { layers: routeLayers });
+    if (!features.length) return;
+
+    const feature = features[0];
+    const layer = feature.layer.id;
+    const props = feature.properties;
+    const streetName = props.street || props.name || "Unknown Street";
+    const facilityType = props.ft_facilit || props.tf_facilit || "Bike Route";
+    const accentColor = LAYER_COLORS[layer] || "#999";
+
+    new maplibregl.Popup({ closeButton: true, closeOnClick: true })
+      .setLngLat(e.lngLat)
+      .setHTML(
+        `<div class="popup-inner">
+          <div class="popup-accent" style="background-color: ${accentColor}"></div>
+          <div class="popup-body">
+            <div class="popup-title">${streetName}</div>
+            <div class="popup-type">${facilityType}</div>
+          </div>
+        </div>`,
+      )
+      .addTo(map);
+  });
+
   routeLayers.forEach((layer) => {
-    map.on("click", layer, (e) => {
-      if (!e.features || e.features.length === 0) return;
-
-      const feature = e.features[0];
-      const props = feature.properties;
-      const streetName = props.street || props.name || "Unknown Street";
-      const facilityType = props.ft_facilit || props.tf_facilit || "Bike Route";
-      const accentColor = LAYER_COLORS[layer] || "#999";
-
-      new maplibregl.Popup({ closeButton: true, closeOnClick: true })
-        .setLngLat(e.lngLat)
-        .setHTML(
-          `
-                    <div class="popup-inner">
-                        <div class="popup-accent" style="background-color: ${accentColor}"></div>
-                        <div class="popup-body">
-                            <div class="popup-title">${streetName}</div>
-                            <div class="popup-type">${facilityType}</div>
-                        </div>
-                    </div>
-                `,
-        )
-        .addTo(map);
-    });
-
     map.on("mouseenter", layer, () => {
       map.getCanvas().style.cursor = "pointer";
     });
-
     map.on("mouseleave", layer, () => {
       map.getCanvas().style.cursor = "";
     });
