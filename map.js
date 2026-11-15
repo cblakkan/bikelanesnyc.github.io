@@ -145,7 +145,7 @@ map.once("style.load", async () => {
     type: "geojson",
     // Fetched and parsed in MapLibre's worker. The ?v= hash is rewritten by
     // fetch_data.sh so the file can be cached long-term.
-    data: "bikeroutes.min.json?v=70a94257db",
+    data: "bikeroutes.min.json?v=70a94257db98",
   });
 
   // Generate arrow images from canvas
