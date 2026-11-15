@@ -127,7 +127,9 @@ var map = new maplibregl.Map({
   touchPitch: false,
 });
 
-map.on("load", async () => {
+// Add bike layers as soon as the basemap style is ready (not after all
+// basemap tiles load) so the bike data downloads in parallel with the tiles.
+map.once("style.load", async () => {
   map.addControl(
     new maplibregl.GeolocateControl({
       positionOptions: {
@@ -141,7 +143,9 @@ map.on("load", async () => {
 
   map.addSource("bikejson", {
     type: "geojson",
-    data: BIKEJSON,
+    // Fetched and parsed in MapLibre's worker. The ?v= hash is rewritten by
+    // fetch_data.sh so the file can be cached long-term.
+    data: "bikeroutes.min.json?v=70a94257db",
   });
 
   // Generate arrow images from canvas
